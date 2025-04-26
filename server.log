@@ -1,0 +1,55 @@
+2025-04-25 10:52:31,267 - secure-comm-server - INFO - Created .env file with secure JWT secret
+2025-04-25 10:52:31,332 - secure-comm-server - INFO - Starting secure communication server
+2025-04-25 10:52:31,335 - secure-comm-server - WARNING - SSL/TLS not configured. WebSocket server running in insecure mode.
+2025-04-25 10:52:31,372 - websockets.server - INFO - server listening on 0.0.0.0:8765
+2025-04-25 10:52:31,372 - secure-comm-server - INFO - WebSocket server started on port 8765
+2025-04-25 10:52:34,226 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.31.191:5000
+2025-04-25 10:52:34,227 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-04-25 10:53:19,658 - secure-comm-server - INFO - Starting secure communication server
+2025-04-25 10:53:19,661 - secure-comm-server - WARNING - SSL/TLS not configured. WebSocket server running in insecure mode.
+2025-04-25 10:53:19,685 - websockets.server - INFO - server listening on 0.0.0.0:8765
+2025-04-25 10:53:19,686 - secure-comm-server - INFO - WebSocket server started on port 8765
+2025-04-25 10:53:20,997 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.31.191:5000
+2025-04-25 10:53:20,998 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-04-25 10:53:44,350 - websockets.server - ERROR - opening handshake failed
+Traceback (most recent call last):
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\server.py", line 545, in parse
+    request = yield from Request.parse(
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\http11.py", line 151, in parse
+    raise ValueError(f"unsupported HTTP method; expected GET; got {d(method)}")
+ValueError: unsupported HTTP method; expected GET; got POST
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\asyncio\server.py", line 356, in conn_handler
+    await connection.handshake(
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\asyncio\server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+2025-04-25 11:05:32,330 - websockets.server - ERROR - opening handshake failed
+Traceback (most recent call last):
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\server.py", line 545, in parse
+    request = yield from Request.parse(
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\http11.py", line 151, in parse
+    raise ValueError(f"unsupported HTTP method; expected GET; got {d(method)}")
+ValueError: unsupported HTTP method; expected GET; got POST
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\asyncio\server.py", line 356, in conn_handler
+    await connection.handshake(
+  File "C:\Users\wwwal\OneDrive\Desktop\Python\.venv\lib\site-packages\websockets\asyncio\server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+2025-04-26 11:34:19,662 - secure-comm-server - INFO - Starting secure communication server
+2025-04-26 11:34:19,665 - secure-comm-server - WARNING - SSL/TLS not configured. WebSocket server running in insecure mode.
+2025-04-26 11:35:43,656 - secure-comm-server - INFO - Starting secure communication server
+2025-04-26 11:35:43,658 - secure-comm-server - WARNING - SSL/TLS not configured. WebSocket server running in insecure mode.

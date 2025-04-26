@@ -1,0 +1,186 @@
+# gui.kv
+ScreenManager:
+    LoginScreen:
+        name: 'login'
+    RegisterScreen:
+        name: 'register'
+    ForgotPasswordScreen:
+        name: 'forgot_password'
+    ChatScreen:
+        name: 'chat'
+
+<LoginScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: [20, 50]
+        spacing: 10
+
+        MDLabel:
+            text: 'Secure Communication Channel'
+            font_size: '24sp'
+            halign: 'center'
+
+        MDLabel:
+            text: 'Login'
+            font_size: '20sp'
+            halign: 'center'
+
+        MDTextField:
+            id: login_username
+            hint_text: 'Username'
+            mode: "rectangle"
+            required: True
+            icon_right: 'account'
+            on_icon_right: self.focus = True
+
+        MDTextField:
+            id: login_password
+            hint_text: 'Password'
+            password: True
+            mode: "rectangle"
+            required: True
+            icon_right: 'eye-off'
+            on_icon_right: self.password = not self.password; self.icon_right = 'eye' if self.password else 'eye-off'
+
+        MDRaisedButton:
+            text: 'Login'
+            pos_hint: {'center_x': .5}
+            on_press: app.login()
+
+        MDRaisedButton:
+            text: 'Login with Google'
+            pos_hint: {'center_x': .5}
+            on_press: app.login_with_google()
+
+        MDFlatButton:
+            text: 'Forgot Password?'
+            pos_hint: {'center_x': .5}
+            on_press: root.manager.current = 'forgot_password'
+
+        MDRaisedButton:
+            text: 'Got no account? Register here'
+            pos_hint: {'center_x': .5}
+            on_press: root.manager.current = 'register'
+
+<RegisterScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: [20, 50]
+        spacing: 10
+
+        MDLabel:
+            text: 'Register'
+            font_size: '24sp'
+            halign: 'center'
+
+
+        MDTextField:
+            id: register_username
+            hint_text: 'Username'
+            mode: "rectangle"
+
+        MDTextField:
+            id: register_email
+            hint_text: 'Email'
+            mode: "rectangle"
+
+        MDTextField:
+            id: register_password
+            hint_text: 'Password'
+            password: True
+            mode: "rectangle"
+            required: True
+            help_text: 'Password must be at least 8 characters long'
+            help_text_mode: 'on_error'
+            icon_right: 'eye-off'
+            on_icon_right: self.password = not self.password; self.icon_right = 'eye' if self.password else 'eye-off'
+
+        MDTextField:
+            id: register_confirm_password
+            hint_text: 'Confirm Password'
+            password: True
+            mode: "rectangle"
+            required: True
+            help_text: 'Password must be at least 8 characters long'
+            help_text_mode: 'on_error'
+            icon_right: 'eye-off'
+            on_icon_right: self.password = not self.password; self.icon_right = 'eye' if self.password else 'eye-off'
+
+        MDTextField:
+            id: captcha_field
+            hint_text: 'Captcha'
+            mode: "rectangle"
+            required: True
+            help_text: 'Please solve the captcha'
+            help_text_mode: 'on_error'
+        MDRaisedButton:
+            text: 'Register'
+            pos_hint: {'center_x': .5}
+            on_press: app.register()
+
+        MDRaisedButton:
+            text: 'Back to Login'
+            pos_hint: {'center_x': .5}
+            on_press: root.manager.current = 'login'
+
+<ForgotPasswordScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+    MDLabel:
+        text: 'Forgot Password'
+        font_size: 24
+    MDTextField:
+        id: username_field
+        hint_text: 'Username or Email'
+    MDRaisedButton:
+        text: 'Reset Password'
+        on_press: root.reset_password()
+<ChatScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+
+        ScrollView:
+            id: chat_history
+            size_hint_y: 0.8
+            do_scroll_x: False
+            MDBoxLayout:
+                id: chat_bubbles
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+
+        MDTextField:
+            id: message_input
+            hint_text: 'Type your message here...'
+            mode: "rectangle"
+
+        MDRaisedButton:
+            id: send_button
+            text: 'Send'
+            on_press: app.send_message()
+
+        MDRaisedButton:
+            text: 'Send File'
+            on_press: app.send_file()
+
+<ChatBubble@MDBoxLayout>:
+    orientation: 'vertical'
+    size_hint_y: None
+    height: 'auto'
+    padding: dp(5)
+    MDLabel:
+        text: root.message
+        theme_text_color: 'Custom'
+        text_color: root.text_color
+        halign: 'left'
+        valign: 'top'
+    MDLabel:
+        text: root.timestamp
+        theme_text_color: 'Secondary'
+        halign: 'right'
+        font_style: 'Caption'
