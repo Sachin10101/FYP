@@ -35,9 +35,18 @@ class ChatService:
             await self.websocket.send(token)
             
             # Send public key to server for secure key exchange
+            # Check if security is a dict or an object with get_public_key method
+            if isinstance(security, dict) and 'public_key' in security:
+                public_key = security['public_key']
+            elif hasattr(security, 'get_public_key'):
+                public_key = security.get_public_key()
+            else:
+                # Fallback if security object doesn't have the expected structure
+                raise ValueError("Security object doesn't have a valid public key")
+                
             await self.websocket.send(json.dumps({
                 "type": "public_key", 
-                "key": security.get('public_key')
+                "key": public_key
             }))
             
             # Start listening for messages

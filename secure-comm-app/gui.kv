@@ -153,6 +153,14 @@ ScreenManager:
                 orientation: 'vertical'
                 size_hint_y: None
                 height: self.minimum_height
+                
+                MDLabel:
+                    id: chat_label
+                    text: ""
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
 
         MDTextField:
             id: message_input
