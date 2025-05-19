@@ -88,8 +88,10 @@ class RegisterScreen(Screen):
         # Send registration data to backend
         try:
             import requests
+            import os
+            server_port = int(os.getenv('SERVER_PORT', 12000))
             response = requests.post(
-                "http://localhost:8765/register",
+                f"http://localhost:{server_port}/register",
                 json={"email": email, "username": username, "password": password}
             )
             if response.status_code == 201:
@@ -166,8 +168,18 @@ class SecureCommApp(MDApp):
         # Initialize database tables
         Base.metadata.create_all(bind=engine)
         
+        # Load environment variables
+        import os
+        import sys
+        sys.path.append('/workspace/FYP')
+        from load_env import load_environment_variables
+        load_environment_variables()
+        
+        # Get WebSocket port from environment or use default
+        websocket_port = int(os.getenv('WEBSOCKET_PORT', 8765))
+        
         # Initialize models (no longer need separate instances)
-        self.chat_service = ChatService("ws://localhost:8765")  # Replace with wss:// for TLS
+        self.chat_service = ChatService(f"ws://localhost:{websocket_port}")  # Replace with wss:// for TLS
         self.file_picker = None  # Placeholder for file picker
         self.user = None
         self.token = None
