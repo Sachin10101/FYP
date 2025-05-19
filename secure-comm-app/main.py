@@ -20,8 +20,8 @@ from database import Base, engine
 class LoginScreen(Screen):
     def login(self):
         # Retrieve input values
-        username = self.ids.username_field.text.strip()
-        password = self.ids.password_field.text.strip()
+        username = self.ids.login_username.text.strip()
+        password = self.ids.login_password.text.strip()
 
         # Validate credentials
         if not username or not password:
@@ -30,24 +30,25 @@ class LoginScreen(Screen):
                 text="Username and password cannot be empty."
             ).open()
             return
-        
-        #Create User model instance
-
-        user = User()
 
         # Check if user exists in the database
-        
-
         db: Session = next(get_db())
         user = User.authenticate(db, username, password)
         if user:
             # Generate JWT token
-            secret_key = 'your_secret_key'  # Ensure this is securely managed
-            token = self.generate_jwt_token(username, user.secret_key)
+            # Use user's secret key or a default if not set
+            secret_key = user.secret_key if user.secret_key else 'your_secret_key'
+            token = self.generate_jwt_token(username, secret_key)
             
             # Pass token and username to chat screen
             chat_screen = self.manager.get_screen('chat')
-            chat_screen.set_token_and_user(token, username)
+            if hasattr(chat_screen, 'set_token_and_user'):
+                chat_screen.set_token_and_user(token, username)
+            else:
+                # If method doesn't exist, store directly in app
+                app = MDApp.get_running_app()
+                app.token = token
+                app.username = username
             
             # Navigate to chat screen
             self.manager.current = 'chat'
@@ -57,6 +58,11 @@ class LoginScreen(Screen):
                 title="Login Failed",
                 text="Invalid username or password. Please try again."
             ).open()
+            
+    def generate_jwt_token(self, username, secret_key):
+        """Generate a JWT token for the user"""
+        payload = {'user': username}
+        return jwt.encode(payload, secret_key, algorithm='HS256')
 
 class RegisterScreen(Screen):
     dialog = None
@@ -82,8 +88,10 @@ class RegisterScreen(Screen):
         # Send registration data to backend
         try:
             import requests
+            import os
+            server_port = int(os.getenv('SERVER_PORT', 12000))
             response = requests.post(
-                "http://localhost:8765/register",
+                f"http://localhost:{server_port}/register",
                 json={"email": email, "username": username, "password": password}
             )
             if response.status_code == 201:
@@ -110,29 +118,73 @@ class ForgotPasswordScreen(Screen):
         self.manager.current = 'login'
 
 class ChatScreen(Screen):
+    def __init__(self, **kwargs):
+        super(ChatScreen, self).__init__(**kwargs)
+        self.token = None
+        self.username = None
+        
+    def set_token_and_user(self, token, username):
+        """Set the JWT token and username for this screen"""
+        self.token = token
+        self.username = username
+        
     def update_chat_history(self, messages, security):
         """Update the chat display with decrypted messages."""
         chat_text = ""
         for msg in messages:
             if msg['type'] == 'message':
-                decrypted = security.decrypt_message(msg['data'])
-                chat_text += f"{msg['sender']}: {decrypted}\n"
+                # Check if content is directly available or needs decryption
+                if 'content' in msg:
+                    content = msg['content']
+                elif 'data' in msg and hasattr(security, 'decrypt_message'):
+                    content = security.decrypt_message(msg['data'])
+                else:
+                    content = "[Encrypted message]"
+                chat_text += f"{msg['sender']}: {content}\n"
             elif msg['type'] == 'file':
-                chat_text += f"{msg['sender']} sent file: {msg['filename']}\n"
-        self.ids.chat_label.text = chat_text
+                chat_text += f"{msg['sender']} sent file: {msg.get('filename', 'unknown')}\n"
+        
+        # Check if chat_label exists in the ids
+        if hasattr(self.ids, 'chat_label'):
+            self.ids.chat_label.text = chat_text
+        elif hasattr(self.ids, 'chat_bubbles'):
+            # If using chat bubbles instead of a label
+            self.ids.chat_bubbles.clear_widgets()
+            for msg in messages:
+                # Add chat bubbles for each message
+                pass
 
 class SecureCommApp(MDApp):
     def build(self):
         Window.size = (800, 600)
         self.theme_cls.theme_style = "Dark"  # Optional: Dark theme
-        self.security = generate_key_pair()  # Generate key pair for encryption
+        
+        # Generate key pair for encryption and store it in a way that's accessible
+        self.security = generate_key_pair()  # This returns a dictionary with 'private_key' and 'public_key'
+        
+        # Add get_public_key method to the security object for compatibility
+        self.security.get_public_key = lambda: self.security['public_key']
+        
         # Initialize database tables
         Base.metadata.create_all(bind=engine)
         
+        # Load environment variables
+        import os
+        import sys
+        sys.path.append('/workspace/FYP')
+        from load_env import load_environment_variables
+        load_environment_variables()
+        
+        # Get WebSocket port from environment or use default
+        websocket_port = int(os.getenv('WEBSOCKET_PORT', 8765))
+        
         # Initialize models (no longer need separate instances)
-        self.chat_service = ChatService("ws://localhost:8765")  # Replace with wss:// for TLS
+        self.chat_service = ChatService(f"ws://localhost:{websocket_port}")  # Replace with wss:// for TLS
         self.file_picker = None  # Placeholder for file picker
         self.user = None
+        self.token = None
+        self.username = None
+        
         Builder.load_file('gui.kv')
         self.root = ScreenManager()
         self.root.add_widget(LoginScreen(name='login'))
@@ -194,6 +246,20 @@ class SecureCommApp(MDApp):
     def send_message(self):
         message = self.root.get_screen('chat').ids.message_input.text.strip()
         if message:
+            # Make sure we have a user object
+            if not self.user:
+                # Try to get the user from the database
+                username = self.username or self.root.get_screen('chat').username
+                if username:
+                    db = next(get_db())
+                    self.user = User.get_by_username(db, username)
+                else:
+                    MDDialog(
+                        title="Error",
+                        text="You need to log in first."
+                    ).open()
+                    return
+            
             # Simulated recipient public key (replace with actual key exchange)
             recipient_public_key = self.security.get_public_key()
             asyncio.run(self.chat_service.send_message(self.user, message, self.security, recipient_public_key))
@@ -204,13 +270,36 @@ class SecureCommApp(MDApp):
         file_path = self.file_picker  # Use the file picker to select a file
         if not file_path:
             print("No file selected.")
+            MDDialog(
+                title="Error",
+                text="No file selected. Please select a file first."
+            ).open()
             return
+            
+        # Make sure we have a user object
+        if not self.user:
+            # Try to get the user from the database
+            username = self.username or self.root.get_screen('chat').username
+            if username:
+                db = next(get_db())
+                self.user = User.get_by_username(db, username)
+            else:
+                MDDialog(
+                    title="Error",
+                    text="You need to log in first."
+                ).open()
+                return
+                
         recipient_public_key = self.security.get_public_key()
         try:
             asyncio.run(self.chat_service.send_file(self.user, file_path, self.security, recipient_public_key))
             self.update_chat()
         except Exception as e:
             print(f"Error sending file: {e}")
+            MDDialog(
+                title="Error",
+                text=f"Error sending file: {e}"
+            ).open()
 
     def update_chat(self):
         self.root.get_screen('chat').update_chat_history(self.chat_service.get_messages(), self.security)

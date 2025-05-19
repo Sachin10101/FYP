@@ -60,11 +60,13 @@ if not os.path.exists('.env'):
         logger.info("Created .env file with secure JWT secret")
 
 # Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+import sys
+sys.path.append('/workspace/FYP')
+from load_env import load_environment_variables
+load_environment_variables()
 
 # Configure JWT
-app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", os.urandom(32).hex())
+app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 jwt = JWTManager(app)
@@ -729,15 +731,18 @@ async def main():
     else:
         logger.warning("SSL/TLS not configured. WebSocket server running in insecure mode.")
     
+    # Get WebSocket port from environment or use default
+    websocket_port = int(os.getenv('WEBSOCKET_PORT', 8765))
+    
     # Start WebSocket server
     start_server = await websockets.serve(
         handle_client, 
         "0.0.0.0",  # Listen on all interfaces
-        8765,
+        websocket_port,
         ssl=ssl_context
     )
     
-    logger.info("WebSocket server started on port 8765")
+    logger.info(f"WebSocket server started on port {websocket_port}")
     await start_server.wait_closed()
 
 if __name__ == '__main__':
@@ -745,7 +750,9 @@ if __name__ == '__main__':
     import threading
     
     def run_flask():
-        app.run(host="0.0.0.0", port=5000, debug=False)
+        server_port = int(os.getenv('SERVER_PORT', 12000))
+        # Debug mode can't be used in a thread, so we disable it here
+        app.run(host="0.0.0.0", port=server_port, debug=False)
     
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True

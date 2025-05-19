@@ -11,6 +11,23 @@ import secrets
 import hashlib
 
 
+class SecurityContext(dict):
+    """A dictionary that also provides method access to its keys"""
+    def __init__(self, *args, **kwargs):
+        super(SecurityContext, self).__init__(*args, **kwargs)
+        
+    def get_public_key(self):
+        """Return the public key"""
+        return self.get('public_key')
+        
+    def get_private_key(self):
+        """Return the private key"""
+        return self.get('private_key')
+        
+    def decrypt_message(self, encrypted_message):
+        """Decrypt a message using the private key"""
+        return decrypt_message(self.get('private_key'), encrypted_message)
+
 def generate_key_pair():
     """Generate RSA key pair"""
     private_key = rsa.generate_private_key(
@@ -32,10 +49,11 @@ def generate_key_pair():
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
     
-    return {
+    # Return a SecurityContext object instead of a plain dictionary
+    return SecurityContext({
         'private_key': private_pem.decode('utf-8'),
         'public_key': public_pem.decode('utf-8')
-    }
+    })
 
 def encrypt_message(public_key_pem, message):
     """Encrypt message with recipient's public key"""
