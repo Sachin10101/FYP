@@ -107,3 +107,12 @@ class Message(Base):
             }
             for room in rooms
         ]
+        
+    @staticmethod
+    def is_user_in_room(db: Session, room_id: int, user_id: int) -> bool:
+        """Check if a user is already in a room"""
+        result = db.query(room_user_association).filter(
+            room_user_association.c.room_id == room_id,
+            room_user_association.c.user_id == user_id
+        ).first()
+        return result is not None

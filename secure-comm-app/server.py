@@ -28,7 +28,7 @@ import ssl
 import logging
 from datetime import datetime, timedelta
 from models.user import User
-from models.room import Room, Message
+from models.room import Room, Message, room_user_association
 from database import get_db, Base, engine
 import re
 import bcrypt
@@ -391,7 +391,11 @@ def add_user_to_room(room_id):
             return jsonify({"message": "User not found"}), 404
         
         # Check if the current user is in the room
-        if not Room.is_user_in_room(db, room_id, current_user.id):
+        room_user = db.query(room_user_association).filter(
+            room_user_association.c.room_id == room_id,
+            room_user_association.c.user_id == current_user.id
+        ).first()
+        if not room_user:
             return jsonify({"message": "You are not a member of this room"}), 403
         
         # Find the user to add
@@ -476,7 +480,11 @@ async def handle_client(websocket, path):
                 
                 if data['type'] == 'join_room':
                     room_id = data['room_id']
-                    if Room.is_user_in_room(db, room_id, user_id):
+                    room_user = db.query(room_user_association).filter(
+                        room_user_association.c.room_id == room_id,
+                        room_user_association.c.user_id == user_id
+                    ).first()
+                    if room_user:
                         clients[client_id]['room_id'] = room_id
                         
                         # Add client to room tracking
@@ -741,16 +749,48 @@ async def main():
     await start_server.wait_closed()
 
 if __name__ == '__main__':
+    # Parse command-line arguments
+    import argparse
+    parser = argparse.ArgumentParser(description='Secure Communication Server')
+    parser.add_argument('--http-port', type=int, default=5000, help='HTTP port for Flask server')
+    parser.add_argument('--ws-port', type=int, default=8765, help='WebSocket port')
+    args = parser.parse_args()
+    
     # Run Flask app in a separate thread
     import threading
     
     def run_flask():
-        app.run(host="0.0.0.0", port=5000, debug=False)
+        app.run(host="0.0.0.0", port=args.http_port, debug=False)
     
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
     
+    # Modify WebSocket port in main function
+    async def main_with_args():
+        # Create SSL context for secure WebSocket (wss://)
+        ssl_context = None
+        cert_file = os.getenv('SSL_CERT_FILE')
+        key_file = os.getenv('SSL_KEY_FILE')
+        
+        if cert_file and key_file and os.path.exists(cert_file) and os.path.exists(key_file):
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_context.load_cert_chain(cert_file, key_file)
+            logger.info("SSL/TLS enabled for WebSocket server")
+        else:
+            logger.warning("SSL/TLS not configured. WebSocket server running in insecure mode.")
+        
+        # Start WebSocket server
+        start_server = await websockets.serve(
+            handle_client, 
+            "0.0.0.0",  # Listen on all interfaces
+            args.ws_port,
+            ssl=ssl_context
+        )
+        
+        logger.info(f"WebSocket server started on port {args.ws_port}")
+        await start_server.wait_closed()
+    
     # Run WebSocket server in the main thread
     logger.info("Starting secure communication server")
-    asyncio.run(main())
+    asyncio.run(main_with_args())
