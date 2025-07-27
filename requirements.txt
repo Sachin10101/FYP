@@ -9,3 +9,6 @@ flask-dance
 SQLAlchemy==2.0.23
 python-dotenv==1.0.0
 pyinstaller==6.3.0
+flask-limiter==3.5.0
+cryptography==41.0.7
+bcrypt==4.1.2

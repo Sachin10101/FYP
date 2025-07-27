@@ -41,9 +41,10 @@ class LoginScreen(Screen):
         db: Session = next(get_db())
         user = User.authenticate(db, username, password)
         if user:
-            # Generate JWT token
-            secret_key = 'your_secret_key'  # Ensure this is securely managed
-            token = self.generate_jwt_token(username, user.secret_key)
+            # Generate JWT token using environment variable or secure random key
+            import os
+            secret_key = os.getenv('JWT_SECRET_KEY', os.urandom(32).hex())
+            token = self.generate_jwt_token(username, secret_key)
             
             # Pass token and username to chat screen
             chat_screen = self.manager.get_screen('chat')
@@ -83,7 +84,7 @@ class RegisterScreen(Screen):
         try:
             import requests
             response = requests.post(
-                "http://localhost:8765/register",
+                "http://localhost:5000/register",  # Use HTTP port for REST API, not WebSocket port
                 json={"email": email, "username": username, "password": password}
             )
             if response.status_code == 201:
@@ -130,7 +131,7 @@ class SecureCommApp(MDApp):
         Base.metadata.create_all(bind=engine)
         
         # Initialize models (no longer need separate instances)
-        self.chat_service = ChatService("ws://localhost:8765")  # Replace with wss:// for TLS
+        self.chat_service = ChatService("ws://localhost:8765")  # Note: Use wss:// with proper SSL certificates in production
         self.file_picker = None  # Placeholder for file picker
         self.user = None
         Builder.load_file('gui.kv')
@@ -175,7 +176,7 @@ class SecureCommApp(MDApp):
             token = self.chat_service.login(username, password)
             # Get user from database
             db: Session = next(get_db())
-            user = User.get_by_username(db, username)
+            user = db.query(User).filter(User.username == username).first()
             self.user = user
             asyncio.run(self.chat_service.connect(token, self.security))
             self.root.current = 'chat'
@@ -188,7 +189,12 @@ class SecureCommApp(MDApp):
         self.root.current = 'login'
 
     def generate_jwt_token(self, username, secret_key):
-        payload = {'user': username}
+        from datetime import datetime, timedelta
+        payload = {
+            'sub': username,  # Standard JWT claim for subject
+            'iat': datetime.utcnow(),  # Issued at
+            'exp': datetime.utcnow() + timedelta(hours=1)  # Expiration
+        }
         return jwt.encode(payload, secret_key, algorithm='HS256')
     
     def send_message(self):
