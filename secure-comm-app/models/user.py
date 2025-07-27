@@ -49,13 +49,16 @@ class User(Base):
             return None
 
     @staticmethod
-    def authenticate(db: Session, username: str, password: str) -> bool:
-        """Verify user credentials"""
+    def authenticate(db: Session, username: str, password: str) -> Optional['User']:
+        """Verify user credentials and return user object if valid"""
         user = db.query(User).filter(User.username == username).first()
         if not user:
-            return False
+            return None
             
-        return bcrypt.checkpw(
+        if bcrypt.checkpw(
             password.encode('utf-8'),
             user.password_hash.encode('utf-8')
-        )
+        ):
+            return user
+        else:
+            return None

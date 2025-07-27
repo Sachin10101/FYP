@@ -145,6 +145,33 @@ def require_api_key(f):
         return f(*args, **kwargs)
     return decorated
 
+def verify_recaptcha(captcha_response):
+    """Verify reCAPTCHA response with Google"""
+    if not captcha_response:
+        return False
+    
+    secret_key = os.getenv('RECAPTCHA_SECRET_KEY')
+    if not secret_key or secret_key == 'your-recaptcha-secret-key':
+        logger.warning("reCAPTCHA secret key not configured")
+        return True  # Skip verification if not configured
+    
+    try:
+        import requests
+        verification_url = 'https://www.google.com/recaptcha/api/siteverify'
+        data = {
+            'secret': secret_key,
+            'response': captcha_response,
+            'remoteip': request.remote_addr
+        }
+        
+        response = requests.post(verification_url, data=data, timeout=5)
+        result = response.json()
+        
+        return result.get('success', False)
+    except Exception as e:
+        logger.error(f"reCAPTCHA verification error: {e}")
+        return False
+
 # Routes
 @app.route('/register', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -164,7 +191,7 @@ def register():
                 return jsonify({"message": "CAPTCHA verification required"}), 400
             
             # Verify CAPTCHA
-            if not verify_captcha(captcha_response):
+            if not verify_recaptcha(captcha_response):
                 return jsonify({"message": "CAPTCHA verification failed"}), 400
         
         # Validate inputs

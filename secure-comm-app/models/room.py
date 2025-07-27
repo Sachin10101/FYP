@@ -43,8 +43,11 @@ class Room(Base):
             )
             db.commit()
             return True
-        except:
+        except Exception as e:
             db.rollback()
+            # Log the error for debugging
+            import logging
+            logging.getLogger(__name__).error(f"Failed to add user {user_id} to room {room_id}: {e}")
             return False
 
 class Message(Base):
@@ -75,7 +78,7 @@ class Message(Base):
         messages = db.query(Message).filter(
             Message.room_id == room_id
         ).order_by(
-            Message.timestamp.desc()
+            Message.timestamp.asc()  # Changed to ascending order for proper chronological display
         ).limit(limit).all()
         
         return [
